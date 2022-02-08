@@ -3,7 +3,8 @@
 class Mssql
 {
 
-    static function OpenConnection()
+    private static string $DefaultDB = "YOUR_DEFAULT_DB";
+    private static function OpenConnection()
     {
         $connectionOptions = array("Database" => "your_DB", "ReturnDatesAsStrings" => true/*date as string not an array*/, "Uid" => "mssql user", "PWD" => "mssql pass");
         $MssqlServer = "your server address";
@@ -23,9 +24,11 @@ class Mssql
 	   $params = array(1, "some descr", "2022-01-01");
      $result = mssql::Select($query, $params);
 	 * */
-    static function Select($query, $params = array()): bool|array|null
+static function Select(string $query, array $params = array(), string $DB = ""): bool|array|null
     {
         try {
+            if($DB !== "")
+                self::$DefaultDB = $DB;
             $conn = self::OpenConnection();
             $arr = null;
 
@@ -51,9 +54,18 @@ class Mssql
         }
     }
 
-    static function Run($query, $params = array()): bool|int
+	
+    /**
+     * @param string $query A query where each parameter is equal to question mark (?)
+     * @param array $params one demension array of query parameters. Each element is matched to query parameters by sequence
+     * @param string $DB A database name where query is executed
+     * @return bool|int Affected rows or false in case of exception or  no rows affected
+     */
+    static function Run($query, $params = array(), string $DB = ""): bool|int
     {
         try {
+	   if($DB !== "")
+                self::$DefaultDB = $DB;
             $conn = self::OpenConnection();
             $result = sqlsrv_query($conn, $query, $params);
 

@@ -15,34 +15,34 @@ class Mssql
         return $conn;
     }
 
-	/**
-	 * @param string $query A query where each parameter is equal to question mark (?)
-	 * @param array $params one demension array of query parameters. Each element is matched to query parameters by sequence
-	 * @return array array  of query result
-	 * @example
-	   $query = "SELECT * FROM DB.dbo.table1 WHERE id = ? AND description = ? AND date = ?";
-	   $params = array(1, "some descr", "2022-01-01");
-     $result = mssql::Select($query, $params);
-	 * */
+
+    /**
+     * @param string $query A query where each parameter is equal to question mark (?)
+     * @param array $params one demension array of query parameters. Each element is matched to query parameters by sequence
+     * @param string $DB A database name where query is executed
+     * @return bool|array|null array of query result (row by row)
+     * @example
+     * $query = "SELECT * FROM DB.dbo.table1 WHERE id = ? AND description = ? AND date = ?";
+     * $params = array(1, "some descr", "2022-01-01");
+     */
+
 static function Select(string $query, array $params = array(), string $DB = ""): bool|array|null
     {
+	$result = FALSE;
+        $conn = FALSE;
         try {
             if($DB !== "")
                 self::$DefaultDB = $DB;
-            $conn = self::OpenConnection();
-            $arr = null;
 
+            $arr = null;
+            $conn = self::OpenConnection();
             $result = sqlsrv_query($conn, $query, $params);
 
             if ($result === FALSE)
                 throw new Exception(print_r(sqlsrv_errors(), true));
 
-            while ($row = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+            while ($row = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC))
                 $arr[] = $row;
-            }
-
-            sqlsrv_free_stmt($result);
-            sqlsrv_close($conn);
 
             return $arr;
         }
@@ -51,6 +51,13 @@ static function Select(string $query, array $params = array(), string $DB = ""):
             error_log("Select DB Exception in ".__FILE__);
             error_log(print_r($e, true));
             return false;
+        }
+	finally
+        {
+            if($result !== FALSE)
+                sqlsrv_free_stmt($result);
+            if($conn !== FALSE)
+                sqlsrv_close($conn);
         }
     }
 
@@ -63,32 +70,39 @@ static function Select(string $query, array $params = array(), string $DB = ""):
      */
     static function Run($query, $params = array(), string $DB = ""): bool|int
     {
+        $result = FALSE;
+        $conn = FALSE;
         try {
-	   if($DB !== "")
+            if($DB !== "")
                 self::$DefaultDB = $DB;
+
             $conn = self::OpenConnection();
             $result = sqlsrv_query($conn, $query, $params);
 
             if ($result === FALSE)
                 throw new Exception(print_r(sqlsrv_errors(), true));
 
-            $rows_affected = sqlsrv_rows_affected($result);
+            $rowsAffected = sqlsrv_rows_affected($result);
 
-            if( $rows_affected === FALSE)
+            if( $rowsAffected === FALSE)
                 throw new Exception(print_r(sqlsrv_errors(), true));
-            elseif( $rows_affected == -1)
-                throw new Exception("Error no rows affected");
+            elseif( $rowsAffected == -1 || $rowsAffected == 0)
+                throw new Exception("Error $rowsAffected rows affected");
 
-            sqlsrv_free_stmt($result);
-            sqlsrv_close($conn);
-
-            return $rows_affected;
+            return $rowsAffected;
         }
         catch(Exception $e)
         {
             error_log("Run DB Exception in ".__FILE__);
             error_log(print_r($e, true));
             return false;
+        }
+	finally
+        {
+            if($result !== FALSE)
+                sqlsrv_free_stmt($result);
+            if($conn !== FALSE)
+                sqlsrv_close($conn);
         }
     }
 
